@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>A Romantic Surprise for You!</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400..900&display=swap" rel="stylesheet">
+
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+    height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background:#0d0d1a;
+    font-family:'Playfair Display', serif;
+    overflow:hidden;
+    perspective:1000px;
+}
+
+body::before{
+    content:"";
+    position:absolute;
+    width:100%;
+    height:100%;
+    background:radial-gradient(circle at center, rgba(255,182,193,0.18), transparent 60%);
+    z-index:0;
+}
+
+/* canvases */
+canvas{
+    position:absolute;
+    top:0; left:0;
+    width:100%; height:100%;
+    pointer-events:none;
+}
+
+#loveCanvas{ z-index:0; }
+#fireworksCanvas{ z-index:1; }
+
+/* container */
+.container{
+    position:relative;
+    z-index:2;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+}
+
+/* box */
+.gift-container{
+    width:200px;
+    height:200px;
+    position:relative;
+    cursor:pointer;
+}
+
+.gift-box{
+    width:100%;
+    height:100%;
+    background:#ff7675;
+    border-radius:0 0 15px 15px;
+    position:absolute;
+    bottom:0;
+}
+
+.gift-lid{
+    width:220px;
+    height:50px;
+    background:#fab1a0;
+    position:absolute;
+    top:-40px;
+    left:-10px;
+    transition:all 0.8s ease;
+}
+
+.container.opened .gift-lid{
+    transform:translate(-60px,-120px) rotate(-45deg);
+    opacity:0;
+}
+
+.container.opened .gift-container{
+    transform:scale(0.7);
+    opacity:0.2;
+}
+
+.hint{
+    margin-top:20px;
+    color:#fab1a0;
+    animation:pulse 1.5s infinite;
+}
+
+@keyframes pulse{
+    50%{transform:scale(1.05);opacity:1;}
+    100%{opacity:0.6;}
+}
+
+/* message */
+.message-card{
+    position:absolute;
+    opacity:0;
+    transform:scale(0.5);
+    background:white;
+    padding:25px 35px;
+    border-radius:20px;
+    max-width:420px;
+    text-align:center;
+    transition:1s;
+}
+
+.container.opened .message-card{
+    opacity:1;
+    transform:translateY(-60px) scale(1);
+}
+
+.message-card h1{
+    color:#ff7675;
+    margin-bottom:10px;
+}
+
+.message-card p{
+    color:#333;
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="loveCanvas"></canvas>
+<canvas id="fireworksCanvas"></canvas>
+
+<div class="container" id="box">
+
+    <div class="gift-container" onclick="openBox()">
+        <div class="gift-lid"></div>
+        <div class="gift-box"></div>
+    </div>
+
+    <div class="hint">Click the box ♥</div>
+
+    <div class="message-card">
+        <h1>For You ♥</h1>
+        <p id="msg"></p>
+    </div>
+
+</div>
+
+<script>
+/* ---------------- LOVE BACKGROUND ---------------- */
+const loveCanvas = document.getElementById("loveCanvas");
+const loveCtx = loveCanvas.getContext("2d");
+
+let W = loveCanvas.width = innerWidth;
+let H = loveCanvas.height = innerHeight;
+
+/* hearts */
+class Heart {
+    constructor(){
+        this.x = Math.random()*W;
+        this.y = H + Math.random()*200;
+        this.size = Math.random()*12+6;
+        this.speed = Math.random()*1+0.5;
+        this.alpha = Math.random()*0.5+0.2;
+    }
+    draw(){
+        loveCtx.fillStyle = `rgba(255,118,117,${this.alpha})`;
+        loveCtx.beginPath();
+        loveCtx.arc(this.x,this.y,this.size,0,Math.PI*2);
+        loveCtx.fill();
+    }
+    update(){
+        this.y -= this.speed;
+        if(this.y < -20){
+            this.y = H;
+            this.x = Math.random()*W;
+        }
+    }
+}
+
+/* flowers */
+class Flower {
+    constructor(){
+        this.x = Math.random()*W;
+        this.y = H + Math.random()*200;
+        this.size = Math.random()*8+5;
+        this.speed = Math.random()*0.8+0.3;
+        this.angle = Math.random()*Math.PI*2;
+    }
+    draw(){
+        loveCtx.fillStyle = "rgba(255,182,193,0.6)";
+        loveCtx.beginPath();
+        loveCtx.arc(this.x,this.y,this.size,0,Math.PI*2);
+        loveCtx.fill();
+    }
+    update(){
+        this.y -= this.speed;
+        this.angle += 0.01;
+        if(this.y < -20){
+            this.y = H;
+            this.x = Math.random()*W;
+        }
+    }
+}
+
+const hearts = Array.from({length:50},()=>new Heart());
+const flowers = Array.from({length:25},()=>new Flower());
+
+function animateLove(){
+    loveCtx.clearRect(0,0,W,H);
+    hearts.forEach(h=>{h.update();h.draw();});
+    flowers.forEach(f=>{f.update();f.draw();});
+    requestAnimationFrame(animateLove);
+}
+animateLove();
+
+/* ---------------- FIREWORKS ---------------- */
+const fireCanvas = document.getElementById("fireworksCanvas");
+const fctx = fireCanvas.getContext("2d");
+
+let FW = fireCanvas.width = innerWidth;
+let FH = fireCanvas.height = innerHeight;
+
+let particles = [];
+
+class Particle{
+    constructor(x,y,color){
+        this.x=x; this.y=y;
+        const angle=Math.random()*Math.PI*2;
+        const speed=Math.random()*6+2;
+        this.vx=Math.cos(angle)*speed;
+        this.vy=Math.sin(angle)*speed;
+        this.alpha=1;
+        this.decay=0.015;
+        this.color=color;
+    }
+    update(){
+        this.x+=this.vx;
+        this.y+=this.vy;
+        this.vy+=0.1;
+        this.alpha-=this.decay;
+    }
+    draw(){
+        fctx.globalAlpha=this.alpha;
+        fctx.fillStyle=this.color;
+        fctx.beginPath();
+        fctx.arc(this.x,this.y,3,0,Math.PI*2);
+        fctx.fill();
+        fctx.globalAlpha=1;
+    }
+}
+
+function createFirework(x,y){
+    const colors=["#ff7675","#fab1a0","#ffeaa7","#fff"];
+    let c=colors[Math.floor(Math.random()*colors.length)];
+    for(let i=0;i<40;i++){
+        particles.push(new Particle(x,y,c));
+    }
+}
+
+function createFlowerBurst(x,y){
+    for(let i=0;i<20;i++){
+        particles.push({
+            x,y,
+            vx:(Math.random()-0.5)*6,
+            vy:(Math.random()-0.5)*6,
+            alpha:1,
+            update(){
+                this.x+=this.vx;
+                this.y+=this.vy;
+                this.alpha-=0.02;
+            },
+            draw(){
+                fctx.globalAlpha=this.alpha;
+                fctx.fillStyle="#ffb6c1";
+                fctx.beginPath();
+                fctx.arc(this.x,this.y,4,0,Math.PI*2);
+                fctx.fill();
+                fctx.globalAlpha=1;
+            }
+        });
+    }
+}
+
+function animateFireworks(){
+    fctx.fillStyle="rgba(13,13,26,0.15)";
+    fctx.fillRect(0,0,FW,FH);
+
+    particles.forEach((p,i)=>{
+        p.update();
+        p.draw();
+        if(p.alpha<=0) particles.splice(i,1);
+    });
+
+    requestAnimationFrame(animateFireworks);
+}
+
+/* ---------------- OPEN BOX ---------------- */
+let opened=false;
+
+function openBox(){
+    if(opened) return;
+    opened=true;
+
+    document.getElementById("box").classList.add("opened");
+
+    animateFireworks();
+
+    createFirework(FW/2,FH/2);
+    setTimeout(()=>createFlowerBurst(FW/2,FH/2),400);
+
+    setInterval(()=>{
+        createFirework(
+            Math.random()*FW,
+            Math.random()*FH*0.6
+        );
+    },800);
+
+    typeText();
+}
+
+/* typing effect */
+const text="You are my favorite place to be, my peace, and my forever ♥";
+let i=0;
+
+function typeText(){
+    const el=document.getElementById("msg");
+    if(i<text.length){
+        el.innerHTML+=text[i++];
+        setTimeout(typeText,40);
+    }
+}
+
+/* resize */
+window.onresize=()=>{
+    W=loveCanvas.width=innerWidth;
+    H=loveCanvas.height=innerHeight;
+    FW=fireCanvas.width=innerWidth;
+    FH=fireCanvas.height=innerHeight;
+};
+</script>
+
+</body>
+</html>
